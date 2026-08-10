@@ -8,14 +8,24 @@ db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
 
+
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
     db.init_app(app)
     migrate.init_app(app, db)
-
     jwt.init_app(app)
+
+    @jwt.token_in_blocklist_loader
+    def check_if_token_revoked(jwt_header, jwt_payload):
+        from app.models import TokenBlocklist
+
+        jti = jwt_payload["jti"]
+
+        token = TokenBlocklist.query.filter_by(jti=jti).first()
+
+        return token is not None
 
     from app.routes.main import main_bp
     app.register_blueprint(main_bp)

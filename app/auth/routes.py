@@ -4,8 +4,13 @@ from app import db
 from app.auth import auth_bp
 from app.models import User
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import create_access_token
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import (
+    create_access_token,
+    jwt_required,
+    get_jwt,
+    get_jwt_identity,
+)
+from app.models import User, TokenBlocklist
 
 @auth_bp.post("/register")
 def register():
@@ -84,4 +89,19 @@ def me():
     return {
         "id": user.id,
         "email": user.email
+    }, 200
+
+@auth_bp.post("/logout")
+@jwt_required()
+def logout():
+    jwt_payload = get_jwt()
+    jti = jwt_payload["jti"]
+
+    token = TokenBlocklist(jti=jti)
+
+    db.session.add(token)
+    db.session.commit()
+
+    return {
+        "message": "خروج موفق بود"
     }, 200
