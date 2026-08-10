@@ -4,7 +4,8 @@ from app import db
 from app.auth import auth_bp
 from app.models import User
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
 @auth_bp.post("/register")
 def register():
@@ -60,7 +61,27 @@ def login():
             "message": "ایمیل یا رمز عبور اشتباه است"
         }, 401
 
+    access_token = create_access_token(identity=str(user.id))
+
     return {
         "message": "ورود موفق بود",
+        "email": user.email,
+        "access_token": access_token
+    }, 200
+
+@auth_bp.get("/me")
+@jwt_required()
+def me():
+    user_id = get_jwt_identity()
+
+    user = User.query.get(int(user_id))
+
+    if not user:
+        return {
+            "message": "کاربر پیدا نشد"
+        }, 404
+
+    return {
+        "id": user.id,
         "email": user.email
     }, 200
