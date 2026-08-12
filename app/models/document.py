@@ -29,3 +29,10 @@ class Document(db.Model):
         default=datetime.utcnow,
         nullable=False
     )
+
+    chunks = db.relationship(
+        "DocumentChunk",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="DocumentChunk.chunk_index",
+    )
