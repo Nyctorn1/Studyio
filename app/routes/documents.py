@@ -89,3 +89,49 @@ def create_document():
                 "characters": len(document.content)
             }
         }, 201
+
+@documents_bp.get("/documents")
+@jwt_required()
+def get_documents():
+    user_id = int(get_jwt_identity())
+
+    documents = Document.query.filter_by(
+        user_id=user_id
+    ).order_by(Document.created_at.desc()).all()
+
+    return {
+        "documents": [
+            {
+                "id": document.id,
+                "title": document.title,
+                "characters": len(document.content),
+                "created_at": document.created_at.isoformat()
+            }
+            for document in documents
+        ]
+    }, 200
+
+@documents_bp.get("/documents/<int:document_id>")
+@jwt_required()
+def get_document(document_id):
+    user_id = int(get_jwt_identity())
+
+    document = Document.query.filter_by(
+        id=document_id,
+        user_id=user_id
+    ).first()
+
+    if not document:
+        return {
+            "message": "سند پیدا نشد"
+        }, 404
+
+    return {
+        "document": {
+            "id": document.id,
+            "title": document.title,
+            "content": document.content,
+            "characters": len(document.content),
+            "created_at": document.created_at.isoformat()
+        }
+    }, 200
