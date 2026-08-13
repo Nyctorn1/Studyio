@@ -88,6 +88,22 @@ function Documents({ onBack, onLogout, onOpenDocument }) {
     setSelectedFile(file);
   }
 
+  function switchUploadType(type) {
+    if (uploading) {
+      return;
+    }
+
+    setUploadType(type);
+    setSelectedFile(null);
+    setTextTitle("");
+    setTextContent("");
+    setMessage("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
   async function handleUpload(event) {
     event.preventDefault();
 
@@ -216,12 +232,17 @@ function Documents({ onBack, onLogout, onOpenDocument }) {
               <div>
                 <p className="eyebrow">سند جدید</p>
                 <h3>افزودن سند</h3>
+                <p>
+                  نوع سندی که می‌خواهی اضافه کنی را انتخاب کن.
+                </p>
               </div>
 
               <button
+                className="upload-close-button"
                 type="button"
                 onClick={closeUpload}
                 disabled={uploading}
+                aria-label="بستن"
               >
                 ×
               </button>
@@ -230,105 +251,144 @@ function Documents({ onBack, onLogout, onOpenDocument }) {
             <div className="upload-tabs">
               <button
                 type="button"
-                className={
-                  uploadType === "pdf"
-                    ? "active"
-                    : ""
-                }
-                onClick={() => {
-                  setUploadType("pdf");
-                  setMessage("");
-                }}
+                className={`upload-tab ${
+                  uploadType === "pdf" ? "active" : ""
+                }`}
+                onClick={() => switchUploadType("pdf")}
                 disabled={uploading}
               >
-                📄 آپلود PDF
+                <span className="upload-tab-icon">📄</span>
+
+                <span>
+                  <strong>فایل PDF</strong>
+                  <small>
+                    جزوه یا کتاب PDF را آپلود کن
+                  </small>
+                </span>
               </button>
 
               <button
                 type="button"
-                className={
-                  uploadType === "text"
-                    ? "active"
-                    : ""
-                }
-                onClick={() => {
-                  setUploadType("text");
-                  setMessage("");
-                }}
+                className={`upload-tab ${
+                  uploadType === "text" ? "active" : ""
+                }`}
+                onClick={() => switchUploadType("text")}
                 disabled={uploading}
               >
-                📝 افزودن متن
+                <span className="upload-tab-icon">📝</span>
+
+                <span>
+                  <strong>متن جدید</strong>
+                  <small>
+                    متن درسی را مستقیماً وارد کن
+                  </small>
+                </span>
               </button>
             </div>
 
-            <form onSubmit={handleUpload}>
+            <form
+              className="upload-form"
+              onSubmit={handleUpload}
+            >
               {uploadType === "pdf" ? (
-                <div className="file-upload-area">
+                <div className="pdf-upload-section">
                   <input
                     ref={fileInputRef}
+                    id="pdf-file"
+                    className="hidden-file-input"
                     type="file"
                     accept=".pdf,application/pdf"
                     onChange={handleFileChange}
                     disabled={uploading}
                   />
 
-                  {selectedFile && (
-                    <div className="selected-file">
-                      <span>📄</span>
+                  <label
+                    htmlFor="pdf-file"
+                    className={`pdf-dropzone ${
+                      selectedFile ? "has-file" : ""
+                    }`}
+                  >
+                    <span className="pdf-dropzone-icon">
+                      {selectedFile ? "📄" : "↑"}
+                    </span>
 
-                      <div>
+                    {selectedFile ? (
+                      <>
                         <strong>
                           {selectedFile.name}
                         </strong>
 
-                        <p>
+                        <span>
                           {(
                             selectedFile.size /
                             1024 /
                             1024
                           ).toFixed(2)}{" "}
                           MB
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                        </span>
+
+                        <span className="change-file">
+                          برای انتخاب فایل دیگر کلیک کن
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <strong>
+                          فایل PDF خودت را انتخاب کن
+                        </strong>
+
+                        <span>
+                          فقط فایل‌های PDF مجاز هستند
+                        </span>
+
+                        <span className="choose-file-button">
+                          انتخاب فایل
+                        </span>
+                      </>
+                    )}
+                  </label>
                 </div>
               ) : (
-                <>
-                  <label htmlFor="text-title">
-                    عنوان سند
-                  </label>
+                <div className="text-upload-section">
+                  <div className="form-field">
+                    <label htmlFor="text-title">
+                      عنوان سند
+                    </label>
 
-                  <input
-                    id="text-title"
-                    type="text"
-                    value={textTitle}
-                    onChange={(event) =>
-                      setTextTitle(event.target.value)
-                    }
-                    placeholder="مثلاً فیزیک فصل اول"
-                    disabled={uploading}
-                  />
+                    <input
+                      id="text-title"
+                      type="text"
+                      value={textTitle}
+                      onChange={(event) =>
+                        setTextTitle(event.target.value)
+                      }
+                      placeholder="مثلاً فیزیک فصل اول"
+                      disabled={uploading}
+                    />
+                  </div>
 
-                  <label htmlFor="text-content">
-                    متن سند
-                  </label>
+                  <div className="form-field">
+                    <label htmlFor="text-content">
+                      متن سند
+                    </label>
 
-                  <textarea
-                    id="text-content"
-                    value={textContent}
-                    onChange={(event) =>
-                      setTextContent(event.target.value)
-                    }
-                    placeholder="متن درسی خودت را اینجا وارد کن..."
-                    rows={8}
-                    disabled={uploading}
-                  />
-                </>
+                    <textarea
+                      id="text-content"
+                      value={textContent}
+                      onChange={(event) =>
+                        setTextContent(event.target.value)
+                      }
+                      placeholder="متن درسی خودت را اینجا وارد کن..."
+                      rows={9}
+                      disabled={uploading}
+                    />
+                  </div>
+                </div>
               )}
 
               <div className="upload-actions">
                 <button
+                  className="upload-cancel-button"
                   type="button"
                   onClick={closeUpload}
                   disabled={uploading}
@@ -337,12 +397,21 @@ function Documents({ onBack, onLogout, onOpenDocument }) {
                 </button>
 
                 <button
+                  className="upload-submit-button"
                   type="submit"
-                  disabled={uploading}
+                  disabled={
+                    uploading ||
+                    (uploadType === "pdf" &&
+                      !selectedFile) ||
+                    (uploadType === "text" &&
+                      !textContent.trim())
+                  }
                 >
                   {uploading
                     ? "در حال افزودن..."
-                    : "افزودن سند"}
+                    : uploadType === "pdf"
+                      ? "افزودن فایل PDF"
+                      : "افزودن متن"}
                 </button>
               </div>
             </form>
