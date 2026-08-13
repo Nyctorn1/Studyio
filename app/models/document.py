@@ -24,6 +24,22 @@ class Document(db.Model):
         nullable=False
     )
 
+    file_type = db.Column(
+        db.String(20),
+        nullable=False,
+        default="text"
+    )
+
+    file_path = db.Column(
+        db.String(500),
+        nullable=True
+    )
+
+    original_filename = db.Column(
+        db.String(255),
+        nullable=True
+    )
+
     created_at = db.Column(
         db.DateTime,
         default=datetime.utcnow,

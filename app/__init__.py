@@ -31,14 +31,13 @@ def create_app():
     app.register_blueprint(main_bp)
 
     from app.routes.profile import profile_bp
-    app.register_blueprint(profile_bp)
+    app.register_blueprint(profile_bp, url_prefix="/api")
 
     from app.routes.documents import documents_bp
-    app.register_blueprint(documents_bp)
+    app.register_blueprint(documents_bp, url_prefix="/api")
 
     from app.auth import auth_bp
-    app.register_blueprint(auth_bp)
-
+    app.register_blueprint(auth_bp, url_prefix="/api")
     from app.models import User
 
     return app

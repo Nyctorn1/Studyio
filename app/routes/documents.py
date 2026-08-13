@@ -1,6 +1,8 @@
 from io import BytesIO
+from pathlib import Path
+from uuid import uuid4
 
-from flask import Blueprint, request
+from flask import Blueprint, request, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from pypdf import PdfReader
 
@@ -10,7 +12,27 @@ from app.services.chunking import chunk_text
 from app.services.document_context_service import DocumentContextService
 from app.services.document_ai_service import DocumentAIService
 
+
 documents_bp = Blueprint("documents", __name__)
+
+UPLOAD_DIR = (
+    Path(__file__).resolve().parents[2]
+    / "uploads"
+    / "documents"
+)
+
+
+def save_uploaded_pdf(file):
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+    original_filename = file.filename or "document.pdf"
+
+    stored_filename = f"{uuid4().hex}.pdf"
+    file_path = UPLOAD_DIR / stored_filename
+
+    file.save(file_path)
+
+    return file_path, original_filename
 
 
 @documents_bp.post("/documents")
@@ -38,6 +60,7 @@ def create_document():
             user_id=user_id,
             title=title,
             content=text,
+            file_type="text",
         )
 
         db.session.add(document)
@@ -62,6 +85,7 @@ def create_document():
             "document": {
                 "id": document.id,
                 "title": document.title,
+                "file_type": document.file_type,
                 "characters": len(document.content),
                 "chunks": len(chunks),
             },
@@ -71,13 +95,15 @@ def create_document():
     # Create document from PDF
     # -------------------------
     if file:
-        if not file.filename.lower().endswith(".pdf"):
+        if not file.filename or not file.filename.lower().endswith(".pdf"):
             return {
                 "message": "فقط فایل PDF مجاز است"
             }, 400
 
         try:
-            pdf = PdfReader(BytesIO(file.read()))
+            pdf_bytes = file.read()
+
+            pdf = PdfReader(BytesIO(pdf_bytes))
 
             extracted_text = "\n".join(
                 page.extract_text() or ""
@@ -94,10 +120,23 @@ def create_document():
                 "message": "متنی از فایل PDF استخراج نشد"
             }, 400
 
+        try:
+            file.seek(0)
+
+            stored_path, original_filename = save_uploaded_pdf(file)
+
+        except Exception:
+            return {
+                "message": "ذخیره فایل PDF ناموفق بود"
+            }, 500
+
         document = Document(
             user_id=user_id,
-            title=file.filename,
+            title=original_filename,
             content=extracted_text,
+            file_type="pdf",
+            file_path=str(stored_path),
+            original_filename=original_filename,
         )
 
         db.session.add(document)
@@ -122,6 +161,8 @@ def create_document():
             "document": {
                 "id": document.id,
                 "title": document.title,
+                "file_type": document.file_type,
+                "original_filename": document.original_filename,
                 "pages": len(pdf.pages),
                 "characters": len(document.content),
                 "chunks": len(chunks),
@@ -146,6 +187,8 @@ def get_documents():
             {
                 "id": document.id,
                 "title": document.title,
+                "file_type": document.file_type,
+                "original_filename": document.original_filename,
                 "characters": len(document.content),
                 "chunks": len(document.chunks),
                 "created_at": document.created_at.isoformat(),
@@ -154,6 +197,44 @@ def get_documents():
         ]
     }, 200
 
+@documents_bp.get("/documents/<int:document_id>/file")
+@jwt_required()
+def get_document_file(document_id):
+    user_id = int(get_jwt_identity())
+
+    document = Document.query.filter_by(
+        id=document_id,
+        user_id=user_id,
+    ).first()
+
+    if not document:
+        return {
+            "message": "سند پیدا نشد"
+        }, 404
+
+    if document.file_type != "pdf":
+        return {
+            "message": "این سند فایل PDF ندارد"
+        }, 404
+
+    if not document.file_path:
+        return {
+            "message": "فایل PDF پیدا نشد"
+        }, 404
+
+    file_path = Path(document.file_path)
+
+    if not file_path.is_file():
+        return {
+            "message": "فایل PDF روی سرور پیدا نشد"
+        }, 404
+
+    return send_file(
+        file_path,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=document.original_filename or document.title,
+    )
 
 @documents_bp.get("/documents/<int:document_id>")
 @jwt_required()
@@ -170,16 +251,24 @@ def get_document(document_id):
             "message": "سند پیدا نشد"
         }, 404
 
+    response_document = {
+        "id": document.id,
+        "title": document.title,
+        "file_type": document.file_type,
+        "original_filename": document.original_filename,
+        "characters": len(document.content),
+        "chunks": len(document.chunks),
+        "created_at": document.created_at.isoformat(),
+    }
+
+    # متن فقط برای اسناد متنی برگردانده شود.
+    if document.file_type == "text":
+        response_document["content"] = document.content
+
     return {
-        "document": {
-            "id": document.id,
-            "title": document.title,
-            "content": document.content,
-            "characters": len(document.content),
-            "chunks": len(document.chunks),
-            "created_at": document.created_at.isoformat(),
-        }
+        "document": response_document
     }, 200
+
 
 @documents_bp.post("/documents/<int:document_id>/summarize")
 @jwt_required()
