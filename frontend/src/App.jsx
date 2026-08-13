@@ -11,12 +11,21 @@ function App() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [authMode, setAuthMode] = useState("login");
+
   const [loggedIn, setLoggedIn] = useState(
     Boolean(localStorage.getItem("access_token"))
   );
 
   const [currentPage, setCurrentPage] = useState("dashboard");
   const [selectedDocumentId, setSelectedDocumentId] = useState(null);
+
+  function switchAuthMode(mode) {
+    setAuthMode(mode);
+    setEmail("");
+    setPassword("");
+    setMessage("");
+  }
 
   async function handleLogin(event) {
     event.preventDefault();
@@ -59,6 +68,46 @@ function App() {
     }
   }
 
+  async function handleRegister(event) {
+    event.preventDefault();
+
+    setMessage("");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setMessage(
+          data.message || "ثبت‌نام ناموفق بود"
+        );
+        return;
+      }
+
+      setMessage(
+        "ثبت‌نام با موفقیت انجام شد. حالا وارد حساب خودت شو."
+      );
+
+      setAuthMode("login");
+      setPassword("");
+    } catch (error) {
+      setMessage("اتصال به سرور برقرار نشد");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   function handleLogout() {
     localStorage.removeItem("access_token");
 
@@ -69,6 +118,7 @@ function App() {
     setEmail("");
     setPassword("");
     setMessage("");
+    setAuthMode("login");
   }
 
   function openDocuments() {
@@ -123,6 +173,8 @@ function App() {
     );
   }
 
+  const isRegister = authMode === "register";
+
   return (
     <main className="auth-page">
       <section className="login-card">
@@ -136,11 +188,26 @@ function App() {
         </div>
 
         <div className="login-header">
-          <h2>خوش آمدی</h2>
-          <p>برای ادامه وارد حساب خودت شو</p>
+          <h2>
+            {isRegister
+              ? "ساخت حساب"
+              : "خوش آمدی"}
+          </h2>
+
+          <p>
+            {isRegister
+              ? "برای شروع یک حساب جدید بساز"
+              : "برای ادامه وارد حساب خودت شو"}
+          </p>
         </div>
 
-        <form onSubmit={handleLogin}>
+        <form
+          onSubmit={
+            isRegister
+              ? handleRegister
+              : handleLogin
+          }
+        >
           <label htmlFor="email">ایمیل</label>
 
           <input
@@ -152,9 +219,12 @@ function App() {
             }
             placeholder="example@email.com"
             required
+            disabled={loading}
           />
 
-          <label htmlFor="password">رمز عبور</label>
+          <label htmlFor="password">
+            رمز عبور
+          </label>
 
           <input
             id="password"
@@ -165,6 +235,8 @@ function App() {
             }
             placeholder="رمز عبور"
             required
+            minLength={6}
+            disabled={loading}
           />
 
           <button
@@ -172,8 +244,12 @@ function App() {
             disabled={loading}
           >
             {loading
-              ? "در حال ورود..."
-              : "ورود"}
+              ? isRegister
+                ? "در حال ثبت‌نام..."
+                : "در حال ورود..."
+              : isRegister
+                ? "ثبت‌نام"
+                : "ورود"}
           </button>
         </form>
 
@@ -185,6 +261,36 @@ function App() {
             {message}
           </p>
         )}
+
+        <div className="auth-switch">
+          {isRegister ? (
+            <p>
+              قبلاً حساب داری؟{" "}
+              <button
+                type="button"
+                onClick={() =>
+                  switchAuthMode("login")
+                }
+                disabled={loading}
+              >
+                ورود
+              </button>
+            </p>
+          ) : (
+            <p>
+              حساب نداری؟{" "}
+              <button
+                type="button"
+                onClick={() =>
+                  switchAuthMode("register")
+                }
+                disabled={loading}
+              >
+                ثبت‌نام
+              </button>
+            </p>
+          )}
+        </div>
       </section>
     </main>
   );
