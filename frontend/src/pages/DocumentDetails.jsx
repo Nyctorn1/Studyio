@@ -236,6 +236,8 @@ function DocumentDetails({ documentId, onBack, onLogout }) {
     }
   }
 
+  const isBusy = summaryLoading || askLoading;
+
   return (
     <main className="document-details-page">
       <header className="dashboard-header">
@@ -249,11 +251,15 @@ function DocumentDetails({ documentId, onBack, onLogout }) {
         </div>
 
         <div className="documents-actions">
-          <button onClick={onBack}>
+          <button
+            type="button"
+            onClick={onBack}
+          >
             بازگشت
           </button>
 
           <button
+            type="button"
             className="logout-button"
             onClick={onLogout}
           >
@@ -264,114 +270,231 @@ function DocumentDetails({ documentId, onBack, onLogout }) {
 
       <section className="document-details-content">
         {loading && (
-          <p className="documents-status">
-            در حال دریافت سند...
-          </p>
+          <div className="document-state-card">
+            <div className="state-icon">📄</div>
+
+            <h3>در حال دریافت سند...</h3>
+
+            <p>
+              لطفاً چند لحظه صبر کن.
+            </p>
+          </div>
         )}
 
         {!loading && documentMessage && (
-          <p className="documents-status">
-            {documentMessage}
-          </p>
+          <div className="document-state-card error">
+            <div className="state-icon">⚠️</div>
+
+            <h3>مشکلی پیش آمد</h3>
+
+            <p>{documentMessage}</p>
+
+            <button
+              type="button"
+              onClick={onBack}
+            >
+              بازگشت به اسناد
+            </button>
+          </div>
         )}
 
         {!loading && document && (
           <>
-            <div className="document-details-header">
-              <div>
+            <section className="document-hero">
+              <div className="document-hero-icon">
+                {document.file_type === "pdf"
+                  ? "📄"
+                  : "📝"}
+              </div>
+
+              <div className="document-hero-info">
                 <p className="eyebrow">
-                  جزئیات سند
+                  سند من
                 </p>
 
                 <h2>{document.title}</h2>
 
-                <p>
-                  {document.file_type === "pdf"
-                    ? "سند PDF"
-                    : "سند متنی"}
-                  {" • "}
-                  {document.characters.toLocaleString(
-                    "fa-IR"
-                  )}{" "}
-                  کاراکتر
-                </p>
+                <div className="document-meta">
+                  <span>
+                    {document.file_type === "pdf"
+                      ? "PDF"
+                      : "متن"}
+                  </span>
+
+                  <span>•</span>
+
+                  <span>
+                    {document.characters.toLocaleString(
+                      "fa-IR"
+                    )}{" "}
+                    کاراکتر
+                  </span>
+                </div>
               </div>
 
               {document.file_type === "pdf" &&
                 fileUrl && (
                   <button
+                    className="document-download-button"
                     type="button"
                     onClick={handleDownload}
                   >
-                    دانلود PDF
+                    ⬇ دانلود PDF
                   </button>
                 )}
-            </div>
+            </section>
 
             <section className="document-ai-panel">
               <div className="document-ai-header">
-                <div>
-                  <p className="eyebrow">
-                    دستیار هوشمند
-                  </p>
+                <div className="document-ai-title">
+                  <div className="ai-icon">
+                    ✨
+                  </div>
 
-                  <h3>
-                    با این سند کار کن
-                  </h3>
+                  <div>
+                    <p className="eyebrow">
+                      دستیار هوشمند
+                    </p>
+
+                    <h3>
+                      با این سند کار کن
+                    </h3>
+
+                    <p>
+                      سند را خلاصه کن یا هر سؤالی
+                      درباره محتوای آن بپرس.
+                    </p>
+                  </div>
                 </div>
 
-                <select
-                  value={language}
-                  onChange={(event) => {
-                    setLanguage(
-                      event.target.value
-                    );
-                    setAiMessage("");
-                  }}
-                  disabled={
-                    summaryLoading ||
-                    askLoading
-                  }
-                >
-                  <option value="fa">
-                    فارسی
-                  </option>
+                <div className="language-control">
+                  <label htmlFor="document-language">
+                    زبان پاسخ
+                  </label>
 
-                  <option value="en">
-                    English
-                  </option>
-                </select>
+                  <select
+                    id="document-language"
+                    value={language}
+                    onChange={(event) => {
+                      setLanguage(
+                        event.target.value
+                      );
+                      setAiMessage("");
+                    }}
+                    disabled={isBusy}
+                  >
+                    <option value="fa">
+                      فارسی
+                    </option>
+
+                    <option value="en">
+                      English
+                    </option>
+                  </select>
+                </div>
               </div>
 
               {aiMessage && (
-                <p
-                  className="documents-status"
+                <div
+                  className="ai-message"
                   role="alert"
                 >
-                  {aiMessage}
-                </p>
+                  <span>⚠️</span>
+                  <span>{aiMessage}</span>
+                </div>
               )}
 
-              <div className="document-ai-actions">
-                <button
-                  type="button"
-                  onClick={handleSummarize}
-                  disabled={
-                    summaryLoading ||
-                    askLoading
-                  }
+              <div className="document-ai-grid">
+                <div className="ai-action-card summary-action-card">
+                  <div className="ai-action-icon">
+                    ✨
+                  </div>
+
+                  <div>
+                    <h4>خلاصه‌سازی سند</h4>
+
+                    <p>
+                      مهم‌ترین نکات این سند را
+                      به‌صورت خلاصه دریافت کن.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSummarize}
+                    disabled={isBusy}
+                  >
+                    {summaryLoading
+                      ? "در حال خلاصه‌سازی..."
+                      : "خلاصه کن"}
+                  </button>
+                </div>
+
+                <form
+                  className="ai-action-card ask-action-card"
+                  onSubmit={handleAsk}
                 >
-                  {summaryLoading
-                    ? "در حال خلاصه‌سازی..."
-                    : "خلاصه‌سازی سند"}
-                </button>
+                  <div className="ai-action-icon">
+                    💬
+                  </div>
+
+                  <div>
+                    <h4>سؤال از سند</h4>
+
+                    <p>
+                      سؤال خودت را بپرس تا بر اساس
+                      همین سند جواب بگیری.
+                    </p>
+                  </div>
+
+                  <textarea
+                    id="document-question"
+                    value={question}
+                    onChange={(event) =>
+                      setQuestion(
+                        event.target.value
+                      )
+                    }
+                    placeholder={
+                      language === "fa"
+                        ? "مثلاً فصل اول درباره چه موضوعاتی صحبت می‌کند؟"
+                        : "For example: What are the main topics in this document?"
+                    }
+                    rows={4}
+                    disabled={isBusy}
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={
+                      isBusy ||
+                      !question.trim()
+                    }
+                  >
+                    {askLoading
+                      ? "در حال پاسخ‌گویی..."
+                      : "پرسیدن سؤال"}
+                  </button>
+                </form>
               </div>
 
               {summary && (
-                <article className="ai-result-card">
-                  <p className="eyebrow">
-                    خلاصه سند
-                  </p>
+                <article className="ai-result-card summary-result-card">
+                  <div className="ai-result-header">
+                    <div>
+                      <p className="eyebrow">
+                        نتیجه خلاصه‌سازی
+                      </p>
+
+                      <h4>
+                        خلاصه سند
+                      </h4>
+                    </div>
+
+                    <span className="result-icon">
+                      ✨
+                    </span>
+                  </div>
 
                   <div className="ai-result-content">
                     {summary}
@@ -379,53 +502,23 @@ function DocumentDetails({ documentId, onBack, onLogout }) {
                 </article>
               )}
 
-              <form
-                className="ask-document-form"
-                onSubmit={handleAsk}
-              >
-                <label htmlFor="document-question">
-                  سؤال از سند
-                </label>
-
-                <textarea
-                  id="document-question"
-                  value={question}
-                  onChange={(event) =>
-                    setQuestion(
-                      event.target.value
-                    )
-                  }
-                  placeholder={
-                    language === "fa"
-                      ? "مثلاً فصل اول درباره چه موضوعاتی صحبت می‌کند؟"
-                      : "For example: What are the main topics in this document?"
-                  }
-                  rows={4}
-                  disabled={
-                    summaryLoading ||
-                    askLoading
-                  }
-                />
-
-                <button
-                  type="submit"
-                  disabled={
-                    askLoading ||
-                    summaryLoading ||
-                    !question.trim()
-                  }
-                >
-                  {askLoading
-                    ? "در حال پاسخ‌گویی..."
-                    : "پرسیدن سؤال"}
-                </button>
-              </form>
-
               {answer && (
-                <article className="ai-result-card">
-                  <p className="eyebrow">
-                    پاسخ دستیار
-                  </p>
+                <article className="ai-result-card answer-result-card">
+                  <div className="ai-result-header">
+                    <div>
+                      <p className="eyebrow">
+                        پاسخ دستیار
+                      </p>
+
+                      <h4>
+                        پاسخ سؤال شما
+                      </h4>
+                    </div>
+
+                    <span className="result-icon">
+                      💬
+                    </span>
+                  </div>
 
                   <div className="ai-result-content">
                     {answer}
@@ -434,35 +527,68 @@ function DocumentDetails({ documentId, onBack, onLogout }) {
               )}
             </section>
 
-            {document.file_type === "pdf" ? (
-              <article className="document-content-card">
-                {fileLoading && (
-                  <p className="documents-status">
-                    در حال دریافت فایل PDF...
+            <section className="document-content-section">
+              <div className="document-section-header">
+                <div>
+                  <p className="eyebrow">
+                    محتوای سند
                   </p>
-                )}
 
-                {!fileLoading && fileUrl && (
-                  <div className="pdf-viewer">
-                    <iframe
-                      src={fileUrl}
-                      title={
-                        document.original_filename ||
-                        document.title
-                      }
-                      width="100%"
-                      height="800"
-                    />
-                  </div>
-                )}
-              </article>
-            ) : (
-              <article className="document-content-card">
-                <div className="document-content">
-                  {document.content}
+                  <h3>
+                    {document.file_type === "pdf"
+                      ? "نمایش فایل PDF"
+                      : "متن سند"}
+                  </h3>
                 </div>
-              </article>
-            )}
+
+                {document.file_type === "pdf" && (
+                  <span className="document-type-badge">
+                    PDF
+                  </span>
+                )}
+              </div>
+
+              {document.file_type === "pdf" ? (
+                <article className="document-content-card pdf-document-card">
+                  {fileLoading && (
+                    <div className="document-file-loading">
+                      <div className="state-icon">
+                        📄
+                      </div>
+
+                      <h3>
+                        در حال آماده‌سازی فایل...
+                      </h3>
+
+                      <p>
+                        فایل PDF در حال بارگذاری
+                        است.
+                      </p>
+                    </div>
+                  )}
+
+                  {!fileLoading && fileUrl && (
+                    <div className="pdf-viewer">
+                      <iframe
+                        src={fileUrl}
+                        title={
+                          document.original_filename ||
+                          document.title
+                        }
+                        width="100%"
+                        height="800"
+                      />
+                    </div>
+                  )}
+                </article>
+              ) : (
+                <article className="document-content-card text-document-card">
+                  <div className="document-content">
+                    {document.content}
+                  </div>
+                </article>
+              )}
+            </section>
           </>
         )}
       </section>
